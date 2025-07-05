@@ -5,6 +5,7 @@ import "./App.css";
 import axios from "axios";
 
 function App() {
+  const [boardSize, setBoardSize] = useState(3)
   const [winLine, setWinline] = useState(3);
 
   const [id, setId] = useState(0);
@@ -18,6 +19,10 @@ function App() {
   );
 
   const [showTableSize, setShowTableSize] = useState(false);
+
+  const [showModal, setShowModal] = useState(false);
+
+  const [saveWin, setSaveWin] = useState("X");
 
   function checkWinner(board, winLine) {
     const size = board.length;
@@ -74,7 +79,6 @@ function App() {
       });
 
       console.log(response);
-      // setId(response.data.id);
     } catch (error) {
       console.error("Error:", error);
     }
@@ -85,19 +89,23 @@ function App() {
       console.log(`ผู้ชนะคือ: ${user}`);
       setId(0);
       setBoard(
-        Array(winLine)
+        Array(boardSize)
           .fill(null)
-          .map(() => Array(winLine).fill(""))
+          .map(() => Array(boardSize).fill(""))
       );
+      setShowModal(true);
+      setSaveWin(user);
       return true;
     } else if (isBoardFull(position)) {
       console.log("เสมอ (Draw)");
       setId(0);
       setBoard(
-        Array(winLine)
+        Array(boardSize)
           .fill(null)
-          .map(() => Array(winLine).fill(""))
+          .map(() => Array(boardSize).fill(""))
       );
+      setShowModal(true);
+      setSaveWin("เสมอ");
       return true;
     } else {
       console.log("ยังไม่มีผู้ชนะ");
@@ -106,19 +114,19 @@ function App() {
   };
 
   const handleClick = async (rowIndex, colIndex) => {
-    // ถ้ามี X หรือ O อยู่แล้ว ไม่ให้คลิก
+    
     if (board[rowIndex][colIndex] !== "") return;
 
-    // สร้างสำเนา board
+    
     const newBoard = board.map((row) => [...row]);
 
-    // ใส่ X ก่อน
+    
     newBoard[rowIndex][colIndex] = "X";
 
     const final = await handlePosition(id, newBoard, "X");
 
     if (!final) {
-      // หา cell ว่างอันแรกแล้วใส่ O (แบบง่าย ๆ)
+      
       const emptyCells = [];
       for (let r = 0; r < board.length; r++) {
         for (let c = 0; c < board.length; c++) {
@@ -128,7 +136,7 @@ function App() {
         }
       }
 
-      // ถ้ามีช่องว่างเหลือ → ให้ O เลือกแบบสุ่ม
+      
       if (emptyCells.length > 0) {
         const randomIndex = Math.floor(Math.random() * emptyCells.length);
         const { r, c } = emptyCells[randomIndex];
@@ -144,6 +152,8 @@ function App() {
   const selectSize = (value) => {
     const intValue = parseInt(value, 10);
     console.log(intValue);
+
+    setBoardSize(intValue);
 
     setBoard(
       Array(intValue)
@@ -169,9 +179,9 @@ function App() {
 
   const handleSubmit = async () => {
     setBoard(
-      Array(winLine)
+      Array(boardSize)
         .fill(null)
-        .map(() => Array(winLine).fill(""))
+        .map(() => Array(boardSize).fill(""))
     );
     setHis(1);
     setShowTableSize(true);
@@ -183,6 +193,7 @@ function App() {
     } catch (error) {
       console.error("Error:", error);
     }
+    setBoardSize(3);
   };
 
   const callHistory = async () => {
@@ -190,15 +201,15 @@ function App() {
     setBoard([]);
     try {
       const response2 = await axios.get("http://localhost:3000/call_history");
-      // console.log(response2);
+      
 
       const saveHis = response2.data.reduce((acc, obj) => {
-        // เช็คว่ามี key ที่ตรงกับ id หรือยัง
+        
         if (!acc[obj.idgameround]) {
-          acc[obj.idgameround] = []; // ถ้าไม่มี ให้สร้างอาเรย์ว่างๆ
+          acc[obj.idgameround] = []; 
         }
-        acc[obj.idgameround].push(obj); // เพิ่มอ็อบเจกต์ในอาเรย์ตาม id
-        return acc; // ส่งผลลัพธ์กลับ
+        acc[obj.idgameround].push(obj); 
+        return acc; 
       }, {});
 
       console.log(Object.entries(saveHis));
@@ -209,41 +220,66 @@ function App() {
     }
   };
 
+  function getDifferencesFromString2(str1, str2) {
+    const result = [];
+    const maxLength = Math.max(str1.length, str2.length);
+
+    for (let i = 0; i < maxLength; i++) {
+      if (str1[i] !== str2[i]) {
+        result.push({
+          index: i,
+          char: str2[i] || "ไม่มี",
+        });
+      }
+    }
+
+    return result;
+  }
+
   const showHistory = async (values) => {
     setId(1);
     for (let i = 0; i < values.length; i++) {
-      // Wait for 1 second before proceeding to the next iteration
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // Parse the position and update the board
       setBoard(JSON.parse(values[i].position));
 
-      // Optionally log the item to see the history
       console.log(values[i]);
     }
 
-    // setId(0);
-    console.log(values);
+
   };
 
+  const showRefresh = () =>{
+    setId(0);
+
+    setBoard(
+      Array(boardSize)
+        .fill(null)
+        .map(() => Array(boardSize).fill(""))
+    );
+
+    setHis([]);
+
+    setBoardSize(3);
+
+  }
+
   return (
-    <>
+    <div>
+      <div style={{ height: 20, width: "60vw", textAlign: "right" }}>
+        <button
+          className="history-button"
+          style={{ height: 70, width: 140 }}
+          onClick={callHistory}
+        >
+          HISTORY
+        </button>
+      </div>
+
       <div className="content">
         <h1 className="game-title">XO GAME</h1>
-        <div className="buttons">
-          <button className="play-button" onClick={handleSubmit}>
-            PLAY
-          </button>
-          <button className="history-button" onClick={callHistory}>
-            HISTORY
-          </button>
-        </div>
-
-        {showTableSize && (
+        {id === 0 && (
           <div className="size-select">
-            <label htmlFor="sizeSelect" className="size-label">
-              เลือกขนาดตาราง :{" "}
-            </label>
             <select
               id="sizeSelect"
               onChange={(e) => selectSize(e.target.value)}
@@ -255,6 +291,31 @@ function App() {
                 </option>
               ))}
             </select>
+          </div>
+        )}
+        <div className="buttons">
+          <button
+            className="play-button"
+            style={{ height: 70, width: 140 }}
+            onClick={handleSubmit}
+          >
+            PLAY
+          </button>
+          <button
+            className="history-button"
+            style={{ height: 70, width: 140, backgroundColor: "blue" }}
+            onClick={showRefresh}
+          >
+            Refresh
+          </button>
+        </div>
+
+        {showModal && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <h2>ผู้ชนะคือ {saveWin}</h2>
+              <button onClick={() => setShowModal(false)}>ปิด</button>
+            </div>
           </div>
         )}
 
@@ -307,7 +368,7 @@ function App() {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
 
